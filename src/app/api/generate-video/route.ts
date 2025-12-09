@@ -5,10 +5,24 @@ import { ProjectData } from '@/types';
 import path from 'path';
 import fs from 'fs';
 
-// Use system ffmpeg (installed via Homebrew)
-// This avoids Turbopack compatibility issues with ffmpeg binary packages
-const FFMPEG_PATH = process.env.FFMPEG_PATH || '/opt/homebrew/bin/ffmpeg';
-ffmpeg.setFfmpegPath(FFMPEG_PATH);
+// Setup ffmpeg path - use system ffmpeg in development, ffmpeg-static in production
+const setupFfmpeg = async () => {
+  if (process.env.NODE_ENV === 'production') {
+    // Use ffmpeg-static in production (Nhost, Vercel, etc.)
+    const ffmpegStatic = await import('ffmpeg-static');
+    const ffmpegPath = ffmpegStatic.default;
+    if (ffmpegPath) {
+      ffmpeg.setFfmpegPath(ffmpegPath);
+    }
+  } else {
+    // Use system ffmpeg in development
+    const FFMPEG_PATH = process.env.FFMPEG_PATH || '/opt/homebrew/bin/ffmpeg';
+    ffmpeg.setFfmpegPath(FFMPEG_PATH);
+  }
+};
+
+// Initialize ffmpeg
+setupFfmpeg();
 
 const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
