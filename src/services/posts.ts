@@ -3,7 +3,7 @@ import { ProjectData } from '@/types';
 
 export interface Post {
   id?: string;
-  user_id: string;
+  user_id?: string;
   title: string;
   status: 'draft' | 'generated' | 'published';
   scheduled_date?: string;
@@ -21,7 +21,6 @@ export class PostsService {
   }
 
   async saveDraft(post: Omit<Post, 'id' | 'created_at' | 'updated_at'>): Promise<{ id: string } | null> {
-    // Note: user_id is automatically set by Hasura based on X-Hasura-User-Id header
     const { data, error } = await this.nhost.graphql.request(`
       mutation InsertPost($object: posts_insert_input!) {
         insert_posts_one(object: $object) {
@@ -61,7 +60,7 @@ export class PostsService {
     });
 
     if (error) {
-      console.error('Error updating post:', error);
+      console.error('Error updating post:', JSON.stringify(error, null, 2));
       return false;
     }
 
@@ -76,7 +75,6 @@ export class PostsService {
           user_id
           title
           status
-          scheduled_date
           project_data
           generated_images
           created_at
@@ -86,36 +84,42 @@ export class PostsService {
     `, { userId });
 
     if (error) {
-      console.error('Error fetching posts:', error);
+      console.error('Error fetching posts:', JSON.stringify(error, null, 2));
       return [];
     }
 
     return data?.posts || [];
   }
 
-  async getPostsByDate(userId: string, date: string): Promise<Post[]> {
+  async getPostsByDate(_userId: string, _date: string): Promise<Post[]> {
+    // Note: scheduled_date column needs to be added via migration
+    // For now, return empty array until migration is applied
+    console.warn('getPostsByDate: scheduled_date column not yet available');
+    return [];
+  }
+
+  async getPostById(id: string): Promise<Post | null> {
     const { data, error } = await this.nhost.graphql.request(`
-      query GetPostsByDate($userId: uuid!, $date: date!) {
-        posts(where: { user_id: { _eq: $userId }, scheduled_date: { _eq: $date } }) {
+      query GetPostById($id: uuid!) {
+        posts_by_pk(id: $id) {
           id
           user_id
           title
           status
-          scheduled_date
           project_data
           generated_images
           created_at
           updated_at
         }
       }
-    `, { userId, date });
+    `, { id });
 
     if (error) {
-      console.error('Error fetching posts by date:', error);
-      return [];
+      console.error('Error fetching post:', JSON.stringify(error, null, 2));
+      return null;
     }
 
-    return data?.posts || [];
+    return data?.posts_by_pk || null;
   }
 
   async deletePost(id: string): Promise<boolean> {
@@ -128,7 +132,7 @@ export class PostsService {
     `, { id });
 
     if (error) {
-      console.error('Error deleting post:', error);
+      console.error('Error deleting post:', JSON.stringify(error, null, 2));
       return false;
     }
 

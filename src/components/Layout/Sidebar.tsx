@@ -2,16 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Image as ImageIcon, Layers, FileText, Menu, Calendar } from 'lucide-react';
+import { Image as ImageIcon, FileText, Menu, Calendar, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Sidebar() {
   const pathname = usePathname();
+
   const navItems = [
     { icon: ImageIcon, label: 'Generator', href: '/editor' },
     { icon: Calendar, label: 'Calendar', href: '/calendar' },
-    { icon: Layers, label: 'Templates', href: '#' },
-    { icon: FileText, label: 'Drafts', href: '#' },
+    { icon: FileText, label: 'Drafts', href: '/drafts' },
+    { icon: CreditCard, label: 'Pricing', href: '/pricing' },
   ];
 
   return (
@@ -29,7 +30,7 @@ export function Sidebar() {
       <div className="flex-1 flex flex-col items-center group-hover/sidebar:items-stretch px-3 py-3">
         <nav className="space-y-2 w-full flex flex-col items-center group-hover/sidebar:items-stretch">
           {navItems.map((item, i) => {
-            const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href) && item.href !== '#';
+            const isActive = item.href !== '#' && pathname.startsWith(item.href);
             return (
               <Link
                 key={i}

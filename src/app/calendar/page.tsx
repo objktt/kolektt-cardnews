@@ -6,7 +6,7 @@ import { Sidebar } from '@/components/Layout/Sidebar';
 import { Header } from '@/components/Layout/Header';
 import { HistoryService, HistoryItem } from '@/services/history';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
-import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 import { nhost } from '@/utils/nhost';
 
@@ -132,17 +132,22 @@ export default function CalendarPage() {
                                      {format(day, 'd')}
                                  </div>
                                  
-                                 {/* Thumbnails / Dots */}
-                                 <div className="flex flex-wrap gap-1">
-                                     {items.map(item => (
-                                         <div key={item.id} className="w-8 h-8 rounded bg-neutral-800 overflow-hidden relative group">
-                                             {item.imageUrls[0] ? (
-                                                <img src={item.imageUrls[0]} className="w-full h-full object-cover" />
-                                             ) : (
-                                                 <ImageIcon size={12} className="m-auto mt-2 opacity-50"/>
-                                             )}
+                                 {/* Title Chips */}
+                                 <div className="flex flex-col gap-1">
+                                     {items.slice(0, 2).map(item => (
+                                         <div
+                                             key={item.id}
+                                             className="text-[10px] px-2 py-1 bg-indigo-600/20 text-indigo-300 rounded-md truncate border border-indigo-500/30"
+                                             title={item.headline}
+                                         >
+                                             {item.headline || 'Untitled'}
                                          </div>
                                      ))}
+                                     {items.length > 2 && (
+                                         <div className="text-[10px] text-neutral-500 px-1">
+                                             +{items.length - 2} more
+                                         </div>
+                                     )}
                                  </div>
                              </div>
                          );
@@ -153,9 +158,17 @@ export default function CalendarPage() {
             {/* Side Panel: Day Details */}
             {selectedDay && (
                 <div className="w-96 bg-neutral-900 border-l border-neutral-800 flex flex-col animate-in slide-in-from-right-10 duration-200">
-                    <div className="p-6 border-b border-neutral-800">
-                        <h2 className="text-xl font-bold">{format(selectedDay, 'EEEE, MMMM d')}</h2>
-                        <div className="text-neutral-500 text-sm mt-1">{selectedDayItems.length} Posts Created</div>
+                    <div className="p-6 border-b border-neutral-800 flex items-start justify-between">
+                        <div>
+                            <h2 className="text-xl font-bold">{format(selectedDay, 'EEEE, MMMM d')}</h2>
+                            <div className="text-neutral-500 text-sm mt-1">{selectedDayItems.length} Posts Created</div>
+                        </div>
+                        <button
+                            onClick={() => setSelectedDay(null)}
+                            className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-500 hover:text-white transition-colors"
+                        >
+                            <X size={18} />
+                        </button>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto p-6 space-y-6">

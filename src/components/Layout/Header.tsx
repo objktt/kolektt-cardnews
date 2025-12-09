@@ -1,9 +1,19 @@
 'use client';
 
-import { Bell, Search, LogOut } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Bell, Search, LogOut, Image, FileText, CheckCircle } from 'lucide-react';
 import { useSignOut } from '@nhost/nextjs';
 import { useRouter } from 'next/navigation';
 import type { User } from '@nhost/nextjs';
+
+interface Notification {
+  id: string;
+  type: 'generated' | 'saved' | 'published';
+  title: string;
+  message: string;
+  time: Date;
+  read: boolean;
+}
 
 interface HeaderProps {
   user?: User | null;
@@ -12,6 +22,79 @@ interface HeaderProps {
 export function Header({ user }: HeaderProps) {
   const { signOut } = useSignOut();
   const router = useRouter();
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load notifications from localStorage
+  useEffect(() => {
+    const loadNotifications = () => {
+      const stored = localStorage.getItem('notifications');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setNotifications(parsed.map((n: Notification) => ({ ...n, time: new Date(n.time) })));
+        } catch {
+          setNotifications([]);
+        }
+      }
+    };
+
+    loadNotifications();
+
+    // Listen for new notifications
+    const handleNewNotification = () => loadNotifications();
+    window.addEventListener('notification-added', handleNewNotification);
+    return () => window.removeEventListener('notification-added', handleNewNotification);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setNotificationOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const markAllAsRead = () => {
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(updated);
+    localStorage.setItem('notifications', JSON.stringify(updated));
+  };
+
+  const clearAll = () => {
+    setNotifications([]);
+    localStorage.removeItem('notifications');
+  };
+
+  const getNotificationIcon = (type: Notification['type']) => {
+    switch (type) {
+      case 'generated':
+        return <Image size={16} className="text-green-400" />;
+      case 'saved':
+        return <FileText size={16} className="text-blue-400" />;
+      case 'published':
+        return <CheckCircle size={16} className="text-purple-400" />;
+    }
+  };
+
+  const formatTime = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -30,7 +113,16 @@ export function Header({ user }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-6 shrink-0 z-10 pl-20">
+    <header className="h-16 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-6 shrink-0 z-[100]">
+      {/* Logo */}
+      <div className="flex items-center gap-4 ml-14">
+        <img 
+          src="/logo.png" 
+          alt="Kolektt.AI" 
+          className="w-8 h-8 object-contain brightness-0 invert"
+        />
+      </div>
+
       {/* Search / Context */}
       <div className="flex items-center gap-4 flex-1">
         <div className="relative w-64 group">
@@ -45,10 +137,75 @@ export function Header({ user }: HeaderProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-4">
-        <button className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors relative">
-          <Bell size={18} />
-          <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-neutral-900" />
-        </button>
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setNotificationOpen(!notificationOpen)}
+            className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 rounded-lg transition-colors relative"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <div className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-neutral-900" />
+            )}
+          </button>
+
+          {notificationOpen && (
+            <div className="absolute right-0 top-full mt-2 w-80 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl overflow-hidden z-[9999]">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+                <h3 className="text-sm font-semibold text-white">Notifications</h3>
+                {notifications.length > 0 && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-xs text-neutral-400 hover:text-white transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                    <span className="text-neutral-600">·</span>
+                    <button
+                      onClick={clearAll}
+                      className="text-xs text-neutral-400 hover:text-red-400 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="max-h-80 overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <Bell size={24} className="mx-auto text-neutral-600 mb-2" />
+                    <p className="text-sm text-neutral-500">No notifications yet</p>
+                    <p className="text-xs text-neutral-600 mt-1">Activity will appear here</p>
+                  </div>
+                ) : (
+                  notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`px-4 py-3 border-b border-neutral-800/50 hover:bg-neutral-800/50 transition-colors ${
+                        !notification.read ? 'bg-neutral-800/30' : ''
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white font-medium truncate">{notification.title}</p>
+                          <p className="text-xs text-neutral-400 mt-0.5">{notification.message}</p>
+                          <p className="text-xs text-neutral-500 mt-1">{formatTime(notification.time)}</p>
+                        </div>
+                        {!notification.read && (
+                          <div className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-1.5" />
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {user && (
           <div className="flex items-center gap-3">

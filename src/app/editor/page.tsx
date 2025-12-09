@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthenticationStatus, useUserData, useNhostClient } from '@nhost/nextjs';
 import { Sidebar } from '@/components/Layout/Sidebar';
 import { Header } from '@/components/Layout/Header';
@@ -10,8 +10,11 @@ import { PostsService } from '@/services/posts';
 import { PreviewPanel } from '@/components/Editor/PreviewPanel';
 import { StorySidebar } from '@/components/Editor/StorySidebar';
 import { ControlPanel } from '@/components/Editor/ControlPanel';
-import { ProjectData, SlideData, INITIAL_PROJECT_DATA, INITIAL_SLIDE } from '@/types';
-import { ChevronDown, Check } from 'lucide-react';
+import { ProjectData, SlideData, INITIAL_PROJECT_DATA, INITIAL_SLIDE, TextPosition } from '@/types';
+import { ChevronDown, Check, Cloud, CloudOff, Undo2, Redo2 } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { NotificationService } from '@/services/notifications';
+import { useHistory } from '@/hooks/useHistory';
 
 const CANVAS_SIZE_OPTIONS = [
   { value: '1:1' as const, label: '1:1', dimensions: '1080 x 1080', description: 'Square' },
@@ -21,18 +24,36 @@ const CANVAS_SIZE_OPTIONS = [
 
 export default function EditorPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, isLoading } = useAuthenticationStatus();
   const user = useUserData();
   const nhost = useNhostClient();
+  const toast = useToast();
+
+  // Get initial tab from URL params
+  const tabParam = searchParams.get('tab');
+  const initialTab = (tabParam === 'template' || tabParam === 'design') ? tabParam : 'slide';
 
   // All hooks must be called before any conditional returns
-  const [data, setData] = useState<ProjectData>(INITIAL_PROJECT_DATA);
+  const {
+    state: data,
+    setState: setData,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    reset: resetHistory,
+  } = useHistory<ProjectData>(INITIAL_PROJECT_DATA, { maxHistory: 50, debounceMs: 500 });
   const [isSaving, setIsSaving] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedUrls, setGeneratedUrls] = useState<string[]>([]);
   const [sizeDropdownOpen, setSizeDropdownOpen] = useState(false);
+  const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
+  const [isLoadingDraft, setIsLoadingDraft] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const initialDataRef = useRef<string>('');
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -51,6 +72,79 @@ export default function EditorPage() {
       router.push('/login');
     }
   }, [isAuthenticated, isLoading, router]);
+
+  // Track unsaved changes
+  useEffect(() => {
+    if (!isLoadingDraft && initialDataRef.current) {
+      const currentDataStr = JSON.stringify(data);
+      setHasUnsavedChanges(currentDataStr !== initialDataRef.current);
+    }
+  }, [data, isLoadingDraft]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if user is typing in an input field
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  // Load draft from URL param
+  useEffect(() => {
+    const draftId = searchParams.get('draft');
+    if (draftId && isAuthenticated && !isLoadingDraft) {
+      setIsLoadingDraft(true);
+      const postsService = new PostsService(nhost);
+      postsService.getPostById(draftId).then((post) => {
+        if (post && post.project_data) {
+          resetHistory(post.project_data);
+          setCurrentDraftId(post.id || null);
+          initialDataRef.current = JSON.stringify(post.project_data);
+          if (post.generated_images) {
+            setGeneratedUrls(post.generated_images);
+          }
+        }
+        setIsLoadingDraft(false);
+      }).catch(() => {
+        setIsLoadingDraft(false);
+      });
+    } else if (!draftId && !initialDataRef.current) {
+      // Set initial data for new project
+      initialDataRef.current = JSON.stringify(INITIAL_PROJECT_DATA);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isAuthenticated, nhost, isLoadingDraft]);
 
   // Helpers
   const activeSlide = data.slides[activeSlideIndex] || data.slides[0];
@@ -91,7 +185,9 @@ export default function EditorPage() {
     setIsGenerating(true);
     setGeneratedUrls([]);
     try {
-      const response = await fetch('/api/generate', {
+      const apiEndpoint = data.exportFormat === 'video' ? '/api/generate-video' : '/api/generate';
+      
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -99,38 +195,111 @@ export default function EditorPage() {
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      if (result.success && result.imageUrls) {
-        setGeneratedUrls(result.imageUrls);
+      
+      // Handle video response
+      if (data.exportFormat === 'video') {
+        if (result.success && result.videoUrl) {
+          setGeneratedUrls([result.videoUrl]);
 
-        // Save to local history
-        HistoryService.add({
-          headline: data.slides[0]?.headline || "Untitled Project",
-          imageUrls: result.imageUrls,
-          projectData: data
-        });
+          // Save to local history
+          HistoryService.add({
+            headline: data.slides[0]?.headline || "Untitled Project",
+            imageUrls: [result.videoUrl],
+            projectData: data
+          });
 
-        // Save to Nhost database for calendar
-        if (user?.id) {
-          try {
-            const postsService = new PostsService(nhost);
-            await postsService.saveDraft({
-              user_id: user.id,
-              title: data.slides[0]?.headline || 'Untitled Project',
-              status: 'generated',
-              project_data: data,
-              generated_images: result.imageUrls,
-            });
-          } catch (dbError) {
-            console.error('Failed to save to database:', dbError);
+          // Save to Nhost database for calendar
+          if (user?.id) {
+            try {
+              const postsService = new PostsService(nhost);
+              if (currentDraftId) {
+                await postsService.updatePost(currentDraftId, {
+                  title: data.slides[0]?.headline || 'Untitled Project',
+                  status: 'generated',
+                  project_data: data,
+                  generated_images: [result.videoUrl],
+                });
+              } else {
+                const newPost = await postsService.saveDraft({
+                  title: data.slides[0]?.headline || 'Untitled Project',
+                  status: 'generated',
+                  project_data: data,
+                  generated_images: [result.videoUrl],
+                });
+                if (newPost && newPost.id !== currentDraftId) {
+                  setCurrentDraftId(newPost.id);
+                  router.replace(`/editor?draft=${newPost.id}`, { scroll: false });
+                }
+              }
+            } catch (dbError) {
+              console.error('Failed to save to database:', dbError);
+              toast.warning('Sync Warning', 'Video generated but failed to save to database.');
+            }
           }
-        }
 
-        alert('Generation Complete! Images saved to calendar.');
-      } else {
-        alert('Failed: ' + result.error);
+          toast.success('Video Generated!', `Duration: ${result.duration}s`);
+          NotificationService.notifyGenerated(
+            data.slides[0]?.headline || 'Untitled Project',
+            1
+          );
+        } else {
+          toast.error('Generation Failed', result.error || 'Unknown error');
+        }
+      } 
+      // Handle images response
+      else {
+        if (result.success && result.imageUrls) {
+          setGeneratedUrls(result.imageUrls);
+
+          // Save to local history
+          HistoryService.add({
+            headline: data.slides[0]?.headline || "Untitled Project",
+            imageUrls: result.imageUrls,
+            projectData: data
+          });
+
+          // Save to Nhost database for calendar
+          if (user?.id) {
+            try {
+              const postsService = new PostsService(nhost);
+              if (currentDraftId) {
+                // Update existing draft
+                await postsService.updatePost(currentDraftId, {
+                  title: data.slides[0]?.headline || 'Untitled Project',
+                  status: 'generated',
+                  project_data: data,
+                  generated_images: result.imageUrls,
+                });
+              } else {
+                // Create new post
+                const newPost = await postsService.saveDraft({
+                  title: data.slides[0]?.headline || 'Untitled Project',
+                  status: 'generated',
+                  project_data: data,
+                  generated_images: result.imageUrls,
+                });
+                if (newPost && newPost.id !== currentDraftId) {
+                  setCurrentDraftId(newPost.id);
+                  router.replace(`/editor?draft=${newPost.id}`, { scroll: false });
+                }
+              }
+            } catch (dbError) {
+              console.error('Failed to save to database:', dbError);
+              toast.warning('Sync Warning', 'Images generated but failed to save to database.');
+            }
+          }
+
+          toast.success('Generation Complete!', `${result.imageUrls.length} image(s) created.`);
+          NotificationService.notifyGenerated(
+            data.slides[0]?.headline || 'Untitled Project',
+            result.imageUrls.length
+          );
+        } else {
+          toast.error('Generation Failed', result.error || 'Unknown error');
+        }
       }
     } catch (e) {
-      alert('Error: ' + e);
+      toast.error('Generation Error', String(e));
     } finally {
       setIsGenerating(false);
     }
@@ -138,37 +307,63 @@ export default function EditorPage() {
 
   const handleSaveDraft = async () => {
     if (!user?.id) {
-      alert('Please log in to save drafts');
+      toast.warning('Login Required', 'Please log in to save drafts');
       return;
     }
     setIsSaving(true);
     try {
       const postsService = new PostsService(nhost);
-      const result = await postsService.saveDraft({
-        user_id: user.id,
-        title: data.slides[0]?.headline || 'Untitled Project',
-        status: 'draft',
-        project_data: data,
-        generated_images: generatedUrls.length > 0 ? generatedUrls : undefined,
-      });
-      if (result) {
-        alert('Draft saved successfully!');
+
+      if (currentDraftId) {
+        // Update existing draft
+        const success = await postsService.updatePost(currentDraftId, {
+          title: data.slides[0]?.headline || 'Untitled Project',
+          status: 'draft',
+          project_data: data,
+          generated_images: generatedUrls.length > 0 ? generatedUrls : [],
+        });
+        if (success) {
+          initialDataRef.current = JSON.stringify(data);
+          setHasUnsavedChanges(false);
+          toast.success('Draft Updated', 'Your changes have been saved.');
+          NotificationService.notifySaved(data.slides[0]?.headline || 'Untitled Project');
+        } else {
+          toast.error('Update Failed', 'Failed to update draft');
+        }
       } else {
-        alert('Failed to save draft');
+        // Create new draft
+        const result = await postsService.saveDraft({
+          title: data.slides[0]?.headline || 'Untitled Project',
+          status: 'draft',
+          project_data: data,
+          generated_images: generatedUrls.length > 0 ? generatedUrls : undefined,
+        });
+        if (result) {
+          setCurrentDraftId(result.id);
+          initialDataRef.current = JSON.stringify(data);
+          setHasUnsavedChanges(false);
+          // Update URL without reload
+          router.replace(`/editor?draft=${result.id}`, { scroll: false });
+          toast.success('Draft Saved', 'Your project has been saved.');
+          NotificationService.notifySaved(data.slides[0]?.headline || 'Untitled Project');
+        } else {
+          toast.error('Save Failed', 'Failed to save draft');
+        }
       }
     } catch (e) {
       console.error('Error saving draft:', e);
-      alert('Error saving draft: ' + e);
+      toast.error('Save Error', String(e));
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Show loading while checking auth
-  if (isLoading) {
+  // Show loading while checking auth or loading draft
+  if (isLoading || isLoadingDraft) {
     return (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center flex-col gap-3">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+        {isLoadingDraft && <span className="text-neutral-500 text-sm">Loading draft...</span>}
       </div>
     );
   }
@@ -196,15 +391,52 @@ export default function EditorPage() {
             isSaving={isSaving}
             onSaveDraft={handleSaveDraft}
             generatedUrls={generatedUrls}
+            initialTab={initialTab}
+            slideCount={data.slides.length}
           />
         </div>
 
         <main className="flex-1 relative flex flex-col min-w-0 bg-neutral-950">
           <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-800 bg-neutral-900/50 backdrop-blur-sm z-10">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <span className="text-xs font-semibold text-neutral-500 uppercase tracking-widest">
                 Canvas
               </span>
+
+              {/* Undo/Redo Buttons */}
+              <div className="flex items-center gap-1 border-l border-neutral-700 pl-4">
+                <button
+                  onClick={undo}
+                  disabled={!canUndo}
+                  className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Undo (Ctrl+Z)"
+                >
+                  <Undo2 size={16} />
+                </button>
+                <button
+                  onClick={redo}
+                  disabled={!canRedo}
+                  className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  title="Redo (Ctrl+Shift+Z)"
+                >
+                  <Redo2 size={16} />
+                </button>
+              </div>
+
+              {/* Save Status Indicator */}
+              <div className={`flex items-center gap-1.5 text-xs ${hasUnsavedChanges ? 'text-yellow-500' : 'text-green-500'}`}>
+                {hasUnsavedChanges ? (
+                  <>
+                    <CloudOff size={14} />
+                    <span>Unsaved changes</span>
+                  </>
+                ) : (
+                  <>
+                    <Cloud size={14} />
+                    <span>Saved</span>
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Canvas Size Dropdown */}
@@ -246,7 +478,11 @@ export default function EditorPage() {
 
           <div className="flex-1 overflow-hidden relative flex items-center justify-center p-8">
             <div className="absolute inset-0 bg-[radial-gradient(#262626_1px,transparent_1px)] [background-size:20px_20px] opacity-50 pointer-events-none" />
-            <PreviewPanel project={data} slide={activeSlide} />
+            <PreviewPanel
+              project={data}
+              slide={activeSlide}
+              onSmallTitlePositionChange={(position: TextPosition) => updateProject({ smallTitlePosition: position })}
+            />
           </div>
         </main>
 

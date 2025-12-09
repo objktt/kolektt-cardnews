@@ -1,4 +1,5 @@
 import { NhostProvider } from '@/components/Providers/NhostProvider';
+import { ToastProvider } from '@/components/ui/Toast';
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -18,7 +19,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className} suppressHydrationWarning>
         <NhostProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </NhostProvider>
       </body>
     </html>

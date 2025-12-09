@@ -37,12 +37,18 @@ export async function POST(req: NextRequest) {
         const cardData = {
             ...slide,
             showDate: projectData.showDate,
+            showSmallTitle: projectData.showSmallTitle,
+            smallTitlePosition: projectData.smallTitlePosition,
+            showHeadline: projectData.showHeadline,
+            showTags: projectData.showTags,
             enableOverlay: projectData.enableOverlay,
             overlayOpacity: projectData.overlayOpacity,
             enableTextBackground: projectData.enableTextBackground,
             templateType: projectData.templateType,
             logoSrc: projectData.logoSrc,
             logoPosition: projectData.logoPosition,
+            fontSettings: projectData.fontSettings,
+            textBoxSettings: projectData.textBoxSettings,
             caption: slide.caption || ''
         };
 
