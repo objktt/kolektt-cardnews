@@ -21,6 +21,11 @@ level = 'warn'
 [hasura.events]
 httpPoolSize = 100
 
+[hasura.resources]
+[hasura.resources.compute]
+cpu = 128
+memory = 256
+
 [functions]
 [functions.node]
 version = 18
@@ -67,14 +72,32 @@ expiresIn = 900
 [auth.session.refreshToken]
 expiresIn = 2592000
 
+[auth.resources]
+[auth.resources.compute]
+cpu = 128
+memory = 256
+
 [postgres]
 version = '14.6-20230705-2'
+
+[postgres.resources]
+[postgres.resources.compute]
+cpu = 128
+memory = 256
+
+[postgres.resources.storage]
+capacity = 1
 
 [provider]
 
 [storage]
 [storage.antivirus]
 server = ''
+
+[storage.resources]
+[storage.resources.compute]
+cpu = 128
+memory = 256
 
 [observability]
 [observability.grafana]
