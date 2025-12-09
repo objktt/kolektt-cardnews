@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthenticationStatus, useUserData, useNhostClient } from '@nhost/nextjs';
 import { Sidebar } from '@/components/Layout/Sidebar';
@@ -22,7 +22,20 @@ const CANVAS_SIZE_OPTIONS = [
   { value: '9:16' as const, label: '9:16', dimensions: '1080 x 1920', description: 'Story' },
 ];
 
+// Wrapper component with Suspense boundary for useSearchParams
 export default function EditorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center flex-col gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    }>
+      <EditorPageContent />
+    </Suspense>
+  );
+}
+
+function EditorPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isAuthenticated, isLoading } = useAuthenticationStatus();

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { nhost } from '@/utils/nhost';
+import { nhostServer } from '@/utils/nhost-server';
 import { getPlanByPriceId } from '@/config/plans';
 
 // Verify Lemon Squeezy webhook signature
@@ -156,7 +156,7 @@ function mapStatus(lemonStatus: string): 'active' | 'cancelled' | 'past_due' | '
 
 async function upsertSubscription(userId: string, data: any) {
   // Check if subscription exists
-  const { data: existing } = await nhost.graphql.request(`
+  const { data: existing } = await nhostServer.graphql.request<{ subscriptions: { id: string }[] }>(`
     query GetSubscription($userId: uuid!) {
       subscriptions(where: { user_id: { _eq: $userId } }, limit: 1) {
         id
@@ -166,7 +166,7 @@ async function upsertSubscription(userId: string, data: any) {
 
   if (existing?.subscriptions?.length) {
     // Update
-    await nhost.graphql.request(`
+    await nhostServer.graphql.request(`
       mutation UpdateSubscription($id: uuid!, $data: subscriptions_set_input!) {
         update_subscriptions_by_pk(pk_columns: { id: $id }, _set: $data) {
           id
@@ -178,7 +178,7 @@ async function upsertSubscription(userId: string, data: any) {
     });
   } else {
     // Insert
-    await nhost.graphql.request(`
+    await nhostServer.graphql.request(`
       mutation CreateSubscription($object: subscriptions_insert_input!) {
         insert_subscriptions_one(object: $object) {
           id
