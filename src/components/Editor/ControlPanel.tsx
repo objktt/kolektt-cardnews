@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ProjectData, SlideData } from '@/types';
-import { Download, Upload, Image as ImageIcon, Type, Calendar, Layers, Sparkles, ArrowRight, Paintbrush, Settings } from 'lucide-react';
+import { ProjectData, SlideData, FONT_OPTIONS, FONT_WEIGHT_OPTIONS } from '@/types';
+import { Download, Upload, Image as ImageIcon, Type, Calendar, Layers, Sparkles, ArrowRight, Paintbrush, Settings, ChevronDown, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Tab Button
@@ -26,13 +26,17 @@ interface ControlPanelProps {
   onSlideChange: (data: Partial<SlideData>) => void;
   isGenerating: boolean;
   onGenerate: () => void;
+  isSaving: boolean;
+  onSaveDraft: () => void;
   generatedUrls?: string[];
 }
 
-export function ControlPanel({ 
-    project, onProjectChange, 
+export function ControlPanel({
+    project, onProjectChange,
     slide, onSlideChange,
-    isGenerating, onGenerate, generatedUrls 
+    isGenerating, onGenerate,
+    isSaving, onSaveDraft,
+    generatedUrls
 }: ControlPanelProps) {
   
   const [activeTab, setActiveTab] = useState<'slide' | 'design'>('slide');
@@ -103,8 +107,8 @@ export function ControlPanel({
             </TabButton>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-thin scrollbar-thumb-neutral-800">
+        {/* Scrollable Content - Hidden scrollbar, scroll on hover */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 [&::-webkit-scrollbar]:w-0 hover:[&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-neutral-700 [&::-webkit-scrollbar-thumb]:rounded-full transition-all">
             
             {activeTab === 'slide' && (
                 <div className="space-y-8 animate-in fade-in zoom-in-95 duration-200">
@@ -171,27 +175,170 @@ export function ControlPanel({
                         <div className="flex items-center gap-2 text-xs font-bold text-neutral-500 uppercase tracking-wider">
                             <Type size={14} /> <span>Text Details</span>
                         </div>
-                        
+
                         <div className="space-y-4">
                              <div>
-                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Headline</label>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="text-xs font-medium text-neutral-500">Headline</label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                        <span className="text-xs text-neutral-500">Show</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={project.showHeadline}
+                                            onChange={(e) => onProjectChange({ showHeadline: e.target.checked })}
+                                            className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
+                                        />
+                                    </label>
+                                </div>
                                 <textarea
                                     value={slide.headline}
                                     onChange={(e) => onSlideChange({ headline: e.target.value })}
                                     rows={3}
-                                    className="w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors"
+                                    disabled={!project.showHeadline}
+                                    className={cn(
+                                        "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
+                                        !project.showHeadline && "opacity-50 cursor-not-allowed"
+                                    )}
                                     placeholder="Enter slide headline..."
                                 />
                              </div>
                              <div>
-                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Tags</label>
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="text-xs font-medium text-neutral-500">Tags</label>
+                                    <label className="flex items-center gap-1.5 cursor-pointer">
+                                        <span className="text-xs text-neutral-500">Show</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={project.showTags}
+                                            onChange={(e) => onProjectChange({ showTags: e.target.checked })}
+                                            className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
+                                        />
+                                    </label>
+                                </div>
                                 <input
                                     defaultValue={slide.tags.join(', ')}
                                     onChange={(e) => handleTagsChange(e.target.value)}
-                                    className="w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors"
+                                    disabled={!project.showTags}
+                                    className={cn(
+                                        "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
+                                        !project.showTags && "opacity-50 cursor-not-allowed"
+                                    )}
                                     placeholder="Separate with commas"
                                 />
                              </div>
+                        </div>
+                    </section>
+
+                    {/* 3. Font Settings */}
+                    <section className="space-y-4">
+                        <div className="flex items-center gap-2 text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                            <Type size={14} /> <span>Font Settings</span>
+                        </div>
+
+                        <div className="bg-neutral-800/30 p-4 rounded-xl border border-neutral-800 space-y-4">
+                            {/* Font Family */}
+                            <div>
+                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Font Family</label>
+                                <div className="relative">
+                                    <select
+                                        value={project.fontSettings.fontFamily}
+                                        onChange={(e) => onProjectChange({
+                                            fontSettings: { ...project.fontSettings, fontFamily: e.target.value }
+                                        })}
+                                        className="w-full text-sm p-3 pr-10 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 appearance-none cursor-pointer"
+                                    >
+                                        {FONT_OPTIONS.map((font) => (
+                                            <option key={font.value} value={font.value}>{font.label}</option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+                                </div>
+                            </div>
+
+                            {/* Font Weight */}
+                            <div>
+                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Font Weight</label>
+                                <div className="flex bg-neutral-900 border border-neutral-700 rounded-lg p-1">
+                                    {FONT_WEIGHT_OPTIONS.map((weight) => (
+                                        <button
+                                            key={weight.value}
+                                            onClick={() => onProjectChange({
+                                                fontSettings: { ...project.fontSettings, fontWeight: weight.value }
+                                            })}
+                                            className={cn(
+                                                "flex-1 py-1.5 text-[10px] font-medium rounded-md transition-all",
+                                                project.fontSettings.fontWeight === weight.value
+                                                    ? "bg-neutral-700 text-white shadow-sm"
+                                                    : "text-neutral-500 hover:text-neutral-300"
+                                            )}
+                                        >
+                                            {weight.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Font Color */}
+                            <div>
+                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Font Color</label>
+                                <div className="flex items-center gap-3">
+                                    <div className="relative">
+                                        <input
+                                            type="color"
+                                            value={project.fontSettings.fontColor}
+                                            onChange={(e) => onProjectChange({
+                                                fontSettings: { ...project.fontSettings, fontColor: e.target.value }
+                                            })}
+                                            className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
+                                        />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={project.fontSettings.fontColor}
+                                        onChange={(e) => onProjectChange({
+                                            fontSettings: { ...project.fontSettings, fontColor: e.target.value }
+                                        })}
+                                        className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
+                                        placeholder="#FFFFFF"
+                                    />
+                                </div>
+                            </div>
+
+                            <hr className="border-neutral-700" />
+
+                            {/* Headline Font Size */}
+                            <div>
+                                <div className="flex justify-between text-xs mb-2">
+                                    <span className="font-medium text-neutral-500">Headline Size</span>
+                                    <span className="text-neutral-400 font-mono">{project.fontSettings.headlineFontSize}px</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="32" max="100"
+                                    value={project.fontSettings.headlineFontSize}
+                                    onChange={(e) => onProjectChange({
+                                        fontSettings: { ...project.fontSettings, headlineFontSize: Number(e.target.value) }
+                                    })}
+                                    className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                />
+                            </div>
+
+                            {/* Tags Font Size */}
+                            <div>
+                                <div className="flex justify-between text-xs mb-2">
+                                    <span className="font-medium text-neutral-500">Tags Size</span>
+                                    <span className="text-neutral-400 font-mono">{project.fontSettings.tagsFontSize}px</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="14" max="40"
+                                    value={project.fontSettings.tagsFontSize}
+                                    onChange={(e) => onProjectChange({
+                                        fontSettings: { ...project.fontSettings, tagsFontSize: Number(e.target.value) }
+                                    })}
+                                    className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                />
+                            </div>
                         </div>
                     </section>
                 </div>
@@ -332,12 +479,13 @@ export function ControlPanel({
 
                              <hr className="border-neutral-800" />
 
+                            {/* Show Date Option */}
                             <label className="flex items-center justify-between cursor-pointer">
                                 <div className="flex items-center gap-2">
                                     <Calendar size={14} className="text-neutral-500" />
                                     <span className="text-sm font-medium text-neutral-300">Show Date</span>
                                 </div>
-                                <input 
+                                <input
                                     type="checkbox"
                                     checked={project.showDate}
                                     onChange={(e) => onProjectChange({ showDate: e.target.checked })}
@@ -356,9 +504,9 @@ export function ControlPanel({
              {generatedUrls && generatedUrls.length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                     {generatedUrls.map((url, i) => (
-                        <a 
+                        <a
                         key={i}
-                        href={url} 
+                        href={url}
                         download={`card-news-${i+1}.png`}
                         target="_blank"
                         rel="noreferrer"
@@ -370,23 +518,43 @@ export function ControlPanel({
                 </div>
             )}
 
-            <button 
-              onClick={onGenerate}
-              disabled={isGenerating}
-              className="w-full py-3.5 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-900/20 active:transform active:scale-[0.98] flex items-center justify-center gap-2"
-            >
-              {isGenerating ? (
-                  <>
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Generating...
-                  </>
-              ) : (
-                  <>
-                    <Download size={16} />
-                    Generate All Slides
-                  </>
-              )}
-            </button>
+            <div className="flex gap-2">
+                <button
+                    onClick={onSaveDraft}
+                    disabled={isSaving}
+                    className="flex-1 py-3 bg-neutral-800 text-neutral-200 text-sm font-bold rounded-xl hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all border border-neutral-700 active:transform active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                    {isSaving ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-neutral-500/30 border-t-neutral-300 rounded-full animate-spin" />
+                            Saving...
+                        </>
+                    ) : (
+                        <>
+                            <Save size={16} />
+                            Save Draft
+                        </>
+                    )}
+                </button>
+
+                <button
+                    onClick={onGenerate}
+                    disabled={isGenerating}
+                    className="flex-1 py-3 bg-indigo-600 text-white text-sm font-bold rounded-xl hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-900/20 active:transform active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                    {isGenerating ? (
+                        <>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Generating...
+                        </>
+                    ) : (
+                        <>
+                            <Download size={16} />
+                            Generate
+                        </>
+                    )}
+                </button>
+            </div>
         </div>
     </div>
   );

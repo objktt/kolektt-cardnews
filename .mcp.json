@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "nhost": {
+      "command": "/usr/local/bin/mcp-nhost",
+      "args": ["start"]
+    }
+  }
+}

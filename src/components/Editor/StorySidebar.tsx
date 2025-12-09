@@ -1,6 +1,6 @@
 import React from 'react';
 import { SlideData } from '@/types';
-import { Plus, Trash2, GripVertical, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Image as ImageIcon, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface StorySidebarProps {
@@ -49,13 +49,42 @@ export function StorySidebar({
                             <GripVertical size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
 
-                        {/* Thumbnail */}
-                        <div className="w-16 h-20 shrink-0 bg-neutral-800 rounded-lg border border-neutral-700 overflow-hidden relative">
+                        {/* Thumbnail - Click to upload */}
+                        <div
+                            className="w-16 h-20 shrink-0 bg-neutral-800 rounded-lg border border-neutral-700 overflow-hidden relative cursor-pointer hover:border-indigo-500/50 transition-colors"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const input = document.getElementById(`slide-image-${slide.id}`) as HTMLInputElement;
+                                input?.click();
+                            }}
+                        >
+                            <input
+                                type="file"
+                                id={`slide-image-${slide.id}`}
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => {
+                                            onUpdateSlide(i, { imageSrc: reader.result as string });
+                                        };
+                                        reader.readAsDataURL(file);
+                                    }
+                                }}
+                            />
                             {slide.imageSrc ? (
-                                <img src={slide.imageSrc} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                <>
+                                    <img src={slide.imageSrc} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                                        <Upload size={14} className="text-white" />
+                                    </div>
+                                </>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-neutral-600">
+                                <div className="w-full h-full flex flex-col items-center justify-center text-neutral-600 hover:text-indigo-400 transition-colors gap-1">
                                     <ImageIcon size={16} />
+                                    <span className="text-[8px] font-medium">Upload</span>
                                 </div>
                             )}
                         </div>

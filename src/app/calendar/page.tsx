@@ -1,17 +1,30 @@
 'use client';
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthenticationStatus, useUserData } from '@nhost/nextjs';
 import { Sidebar } from '@/components/Layout/Sidebar';
 import { Header } from '@/components/Layout/Header';
 import { HistoryService, HistoryItem } from '@/services/history';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from 'lucide-react';
 
 import { nhost } from '@/utils/nhost';
 
 export default function CalendarPage() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuthenticationStatus();
+  const user = useUserData();
+
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -27,21 +40,22 @@ export default function CalendarPage() {
                 posts(order_by: {created_at: desc}) {
                   id
                   created_at
-                  headline
-                  image_urls
+                  title
+                  status
+                  generated_images
                   project_data
                 }
               }
             `;
 
             const { data, error } = await nhost.graphql.request(GET_POSTS);
-            
+
             if (data && data.posts) {
                 const mapped: HistoryItem[] = data.posts.map((p: any) => ({
                     id: p.id,
                     date: p.created_at,
-                    headline: p.headline,
-                    imageUrls: typeof p.image_urls === 'string' ? JSON.parse(p.image_urls) : (p.image_urls || []),
+                    headline: p.title,
+                    imageUrls: Array.isArray(p.generated_images) ? p.generated_images : [],
                     projectData: p.project_data
                 }));
                 setHistory(mapped);
@@ -67,13 +81,27 @@ export default function CalendarPage() {
   
   const selectedDayItems = selectedDay ? getItemsForDay(selectedDay) : [];
 
+  // Show loading while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col h-screen w-full bg-neutral-950 text-neutral-100 font-sans">
-      <Header />
+      <Header user={user} />
       <div className="flex flex-1 overflow-hidden relative">
         <Sidebar />
         
-        <main className="flex-1 overflow-y-auto p-8 flex gap-8">
+        <main className="flex-1 overflow-y-auto p-8 pl-24 flex gap-8">
             {/* Calendar Grid */}
             <div className="flex-1 flex flex-col gap-6">
                  <div className="flex items-center justify-between">

@@ -1,5 +1,4 @@
-import { NhostProvider } from '@nhost/nextjs';
-import { nhost } from '@/utils/nhost';
+import { NhostProvider } from '@/components/Providers/NhostProvider';
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -18,7 +17,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className} suppressHydrationWarning>
-        <NhostProvider nhost={nhost}>
+        <NhostProvider>
           {children}
         </NhostProvider>
       </body>

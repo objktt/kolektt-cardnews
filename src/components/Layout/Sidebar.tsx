@@ -1,4 +1,5 @@
-import React from 'react';
+'use client';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Image as ImageIcon, Layers, FileText, Menu, Calendar } from 'lucide-react';
@@ -14,47 +15,50 @@ export function Sidebar() {
   ];
 
   return (
-    <div className="group w-16 hover:w-64 h-full bg-neutral-900 border-r border-neutral-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out z-50 fixed left-0 top-0 bottom-0 pointer-events-auto shadow-2xl overflow-hidden">
-       {/* Logo / Menu Icon */}
-       <div className="h-16 flex items-center px-5 shrink-0 border-b border-neutral-800">
-            <Menu className="text-neutral-400 group-hover:text-white transition-colors" size={20} />
-            <span className="ml-4 font-bold text-lg text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap duration-200">
-                Kolektt.AI
-            </span>
-       </div>
+    <div className="group/sidebar w-16 hover:w-64 h-full bg-neutral-900 border-r border-neutral-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out z-50 fixed left-0 top-0 bottom-0 pointer-events-auto shadow-2xl overflow-hidden">
+      {/* Logo / Menu Icon */}
+      <div className="h-16 flex items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-5 shrink-0 border-b border-neutral-800 transition-all duration-300">
+        <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-xl group-hover/sidebar:w-auto group-hover/sidebar:h-auto">
+          <Menu className="text-neutral-400 group-hover/sidebar:text-white transition-colors" size={20} />
+        </div>
+        <span className="font-bold text-lg text-white w-0 overflow-hidden group-hover/sidebar:w-auto group-hover/sidebar:ml-4 transition-all whitespace-nowrap duration-300">
+          Kolektt.AI
+        </span>
+      </div>
 
-      <div className="p-3 flex-1">
-        <nav className="space-y-2">
+      <div className="flex-1 flex flex-col items-center group-hover/sidebar:items-stretch px-3 py-3">
+        <nav className="space-y-2 w-full flex flex-col items-center group-hover/sidebar:items-stretch">
           {navItems.map((item, i) => {
             const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href) && item.href !== '#';
             return (
-            <Link
-              key={i}
-              href={item.href}
-              className={cn(
-                "w-full flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all whitespace-nowrap overflow-hidden block",
-                isActive
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/20" 
-                  : "text-neutral-500 hover:text-white hover:bg-neutral-800"
-              )}
-            >
-              <item.icon size={20} className="shrink-0" />
-              <span className="ml-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                {item.label}
-              </span>
-            </Link>
+              <Link
+                key={i}
+                href={item.href}
+                className={cn(
+                  "flex items-center justify-center w-10 h-10 rounded-xl text-sm font-medium transition-all whitespace-nowrap overflow-hidden",
+                  "group-hover/sidebar:justify-start group-hover/sidebar:w-full group-hover/sidebar:px-4 group-hover/sidebar:py-3",
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/20"
+                    : "text-neutral-500 hover:text-white hover:bg-neutral-800"
+                )}
+              >
+                <item.icon size={20} className="shrink-0" />
+                <span className="w-0 overflow-hidden group-hover/sidebar:w-auto group-hover/sidebar:ml-4 transition-all duration-300">
+                  {item.label}
+                </span>
+              </Link>
             );
           })}
         </nav>
       </div>
 
-      <div className="p-3 mt-auto border-t border-neutral-800">
-         <div className="flex items-center px-3 gap-3 text-xs text-neutral-500 whitespace-nowrap overflow-hidden">
-            <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
-            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                System Online
-            </span>
-         </div>
+      <div className="px-3 py-3 mt-auto border-t border-neutral-800 flex justify-center group-hover/sidebar:justify-start">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl group-hover/sidebar:w-full group-hover/sidebar:px-4 group-hover/sidebar:py-3 text-xs text-neutral-500 whitespace-nowrap overflow-hidden transition-all">
+          <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+          <span className="w-0 overflow-hidden group-hover/sidebar:w-auto group-hover/sidebar:ml-4 transition-all duration-300">
+            System Online
+          </span>
+        </div>
       </div>
     </div>
   );

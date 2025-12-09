@@ -1,11 +1,23 @@
 import React from 'react';
-import { ProjectData, SlideData } from '@/types';
+import { ProjectData, SlideData, INITIAL_FONT_SETTINGS } from '@/types';
 
 type TemplateData = SlideData & Partial<ProjectData>;
+
+const FONT_WEIGHT_MAP: Record<string, number> = {
+  'normal': 400,
+  'medium': 500,
+  'semibold': 600,
+  'bold': 700,
+  'extrabold': 800,
+};
 
 export function CardNewsV1({ data }: { data: TemplateData }) {
   // Safe date formatting
   const today = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+  // Font settings with fallback
+  const fontSettings = data.fontSettings || INITIAL_FONT_SETTINGS;
+  const fontWeight = FONT_WEIGHT_MAP[fontSettings.fontWeight] || 700;
 
   return (
     <div id="card-template" className="relative w-full h-full bg-black text-white overflow-hidden">
@@ -58,26 +70,42 @@ export function CardNewsV1({ data }: { data: TemplateData }) {
         </div>
         
         {/* Bottom: Headline + Tags */}
-        <div className={`flex flex-col gap-8 items-start w-full ${data.enableTextBackground ? '' : ''}`}>
-             
+        {(data.showHeadline !== false || data.showTags !== false) && (
+          <div className={`flex flex-col gap-8 items-start w-full`}>
+
             {/* Headline Group */}
             <div className={`flex flex-col gap-6 w-full ${data.enableTextBackground ? 'bg-black/60 backdrop-blur-sm p-8 rounded-xl -ml-8 pr-12' : ''}`}>
-                <h1 className="font-bold leading-[1.1] whitespace-pre-wrap line-clamp-3 overflow-hidden text-ellipsis drop-shadow-lg"
-                    style={{ fontSize: '60px' }}>
+              {data.showHeadline !== false && (
+                <h1 className="leading-[1.1] whitespace-pre-wrap line-clamp-3 overflow-hidden text-ellipsis drop-shadow-lg"
+                    style={{
+                      fontSize: `${fontSettings.headlineFontSize}px`,
+                      fontFamily: fontSettings.fontFamily,
+                      fontWeight: fontWeight,
+                      color: fontSettings.fontColor,
+                    }}>
                     {data.headline || "Headline\nGoes Here"}
                 </h1>
-                
-                {/* Tags: 26px */}
+              )}
+
+              {/* Tags */}
+              {data.showTags !== false && data.tags && data.tags.length > 0 && (
                 <div className="flex flex-wrap gap-x-4 gap-y-2">
                     {data.tags.map((tag: string, i: number) => (
-                        <span key={i} className="font-medium opacity-100 text-neutral-100 drop-shadow-md"
-                            style={{ fontSize: '26px' }}>
+                        <span key={i} className="opacity-100 drop-shadow-md"
+                            style={{
+                              fontSize: `${fontSettings.tagsFontSize}px`,
+                              fontFamily: fontSettings.fontFamily,
+                              fontWeight: fontWeight,
+                              color: fontSettings.fontColor,
+                            }}>
                             #{tag}
                         </span>
                     ))}
                 </div>
+              )}
             </div>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

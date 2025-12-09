@@ -18,13 +18,15 @@ export function PreviewPanel({ project, slide }: PreviewPanelProps) {
   const templateData = {
     ...slide,
     showDate: project.showDate,
+    showHeadline: project.showHeadline,
+    showTags: project.showTags,
     enableOverlay: project.enableOverlay,
     overlayOpacity: project.overlayOpacity,
     enableTextBackground: project.enableTextBackground,
     templateType: project.templateType,
     logoSrc: project.logoSrc,
     logoPosition: project.logoPosition,
-    // Add missing fields if any
+    fontSettings: project.fontSettings,
     caption: slide.caption || '',
   };
 
