@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Image as ImageIcon, FileText, Menu, Calendar, CreditCard } from 'lucide-react';
+import { Image as ImageIcon, FileText, Calendar, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Sidebar() {
@@ -17,15 +17,8 @@ export function Sidebar() {
 
   return (
     <div className="group/sidebar w-16 hover:w-64 h-full bg-neutral-900 border-r border-neutral-800 flex flex-col shrink-0 transition-all duration-300 ease-in-out z-50 fixed left-0 top-0 bottom-0 pointer-events-auto shadow-2xl overflow-hidden">
-      {/* Logo / Menu Icon */}
-      <div className="h-16 flex items-center justify-center group-hover/sidebar:justify-start group-hover/sidebar:px-5 shrink-0 border-b border-neutral-800 transition-all duration-300">
-        <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-xl group-hover/sidebar:w-auto group-hover/sidebar:h-auto">
-          <Menu className="text-neutral-400 group-hover/sidebar:text-white transition-colors" size={20} />
-        </div>
-        <span className="font-bold text-lg text-white w-0 overflow-hidden group-hover/sidebar:w-auto group-hover/sidebar:ml-4 transition-all whitespace-nowrap duration-300">
-          Kolektt.AI
-        </span>
-      </div>
+      {/* Spacer for header alignment */}
+      <div className="h-16 shrink-0 border-b border-neutral-800" />
 
       <div className="flex-1 flex flex-col items-center group-hover/sidebar:items-stretch px-3 py-3">
         <nav className="space-y-2 w-full flex flex-col items-center group-hover/sidebar:items-stretch">

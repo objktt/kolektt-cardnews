@@ -6,7 +6,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Kolektt.AI - Card News Generator",
+  title: "Kardyy - AI Card News Generator",
   description: "Create viral card news with AI",
 };
 

@@ -115,16 +115,13 @@ export function Header({ user }: HeaderProps) {
   return (
     <header className="h-16 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-6 shrink-0 z-[100]">
       {/* Logo */}
-      <div className="flex items-center gap-4 ml-14">
-        <img 
-          src="/logo.png" 
-          alt="Kolektt.AI" 
-          className="w-8 h-8 object-contain brightness-0 invert"
-        />
+      <div className="flex items-center gap-3 ml-2">
+        <img src="/logo.png" alt="Kardyy" className="w-6 h-6 brightness-0 invert" />
+        <span className="font-bold text-lg text-white">Kardyy</span>
       </div>
 
       {/* Search / Context */}
-      <div className="flex items-center gap-4 flex-1">
+      <div className="flex items-center gap-4 flex-1 ml-8">
         <div className="relative w-64 group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 group-hover:text-neutral-400 transition-colors" size={16} />
           <input

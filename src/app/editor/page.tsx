@@ -8,10 +8,10 @@ import { Header } from '@/components/Layout/Header';
 import { HistoryService } from '@/services/history';
 import { PostsService } from '@/services/posts';
 import { PreviewPanel } from '@/components/Editor/PreviewPanel';
-import { StorySidebar } from '@/components/Editor/StorySidebar';
+import { StoryTimeline } from '@/components/Editor/StoryTimeline';
 import { ControlPanel } from '@/components/Editor/ControlPanel';
 import { ProjectData, SlideData, INITIAL_PROJECT_DATA, INITIAL_SLIDE, TextPosition } from '@/types';
-import { ChevronDown, Check, Cloud, CloudOff, Undo2, Redo2 } from 'lucide-react';
+import { ChevronDown, Check, Cloud, CloudOff, Undo2, Redo2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { NotificationService } from '@/services/notifications';
 import { useHistory } from '@/hooks/useHistory';
@@ -65,6 +65,7 @@ function EditorPageContent() {
   const [currentDraftId, setCurrentDraftId] = useState<string | null>(null);
   const [isLoadingDraft, setIsLoadingDraft] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [zoom, setZoom] = useState(0.38);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const initialDataRef = useRef<string>('');
 
@@ -386,6 +387,15 @@ function EditorPageContent() {
     return null;
   }
 
+  const handleDuplicateSlide = (index: number) => {
+    const slideToDuplicate = data.slides[index];
+    const newSlide = { ...slideToDuplicate, id: `slide-${Date.now()}` };
+    const newSlides = [...data.slides];
+    newSlides.splice(index + 1, 0, newSlide);
+    setData({ ...data, slides: newSlides });
+    setActiveSlideIndex(index + 1);
+  };
+
   return (
     <div className="flex flex-col h-screen w-full bg-neutral-950 overflow-hidden text-neutral-100 font-sans">
       <Header user={user} />
@@ -495,18 +505,54 @@ function EditorPageContent() {
               project={data}
               slide={activeSlide}
               onSmallTitlePositionChange={(position: TextPosition) => updateProject({ smallTitlePosition: position })}
+              onTextBoxPositionChange={(position: TextPosition) => updateProject({
+                textBoxSettings: { ...data.textBoxSettings, position }
+              })}
+              onSlideChange={updateActiveSlide}
+              zoom={zoom}
             />
-          </div>
-        </main>
 
-        <StorySidebar
-          slides={data.slides}
-          activeSlideIndex={activeSlideIndex}
-          onSelectSlide={setActiveSlideIndex}
-          onUpdateSlide={updateSlideAtIndex}
-          onAddSlide={handleAddSlide}
-          onRemoveSlide={handleRemoveSlide}
-        />
+            {/* Zoom Controls */}
+            <div className="absolute bottom-4 right-4 flex items-center gap-1 bg-neutral-900/90 backdrop-blur-sm rounded-lg border border-neutral-700 p-1">
+              <button
+                onClick={() => setZoom(Math.max(0.2, zoom - 0.05))}
+                className="p-2 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                title="Zoom Out"
+              >
+                <ZoomOut size={16} />
+              </button>
+              <span className="px-2 text-xs text-neutral-400 min-w-[50px] text-center font-medium">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={() => setZoom(Math.min(1, zoom + 0.05))}
+                className="p-2 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                title="Zoom In"
+              >
+                <ZoomIn size={16} />
+              </button>
+              <div className="w-px h-5 bg-neutral-700 mx-1" />
+              <button
+                onClick={() => setZoom(0.38)}
+                className="p-2 rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+                title="Reset Zoom"
+              >
+                <RotateCcw size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Timeline */}
+          <StoryTimeline
+            slides={data.slides}
+            activeSlideIndex={activeSlideIndex}
+            onSelectSlide={setActiveSlideIndex}
+            onUpdateSlide={updateSlideAtIndex}
+            onAddSlide={handleAddSlide}
+            onRemoveSlide={handleRemoveSlide}
+            onDuplicateSlide={handleDuplicateSlide}
+          />
+        </main>
       </div>
     </div>
   );

@@ -57,6 +57,21 @@ const AccordionSection = ({
     </section>
 );
 
+// Sub Tab Button for internal tabs
+const SubTabButton = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
+    <button
+        onClick={onClick}
+        className={cn(
+            "flex-1 py-2 text-xs font-medium rounded-lg transition-all",
+            active
+                ? "bg-neutral-700 text-white"
+                : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800"
+        )}
+    >
+        {children}
+    </button>
+);
+
 interface ControlPanelProps {
   project: ProjectData;
   onProjectChange: (data: Partial<ProjectData>) => void;
@@ -82,6 +97,7 @@ export function ControlPanel({
 }: ControlPanelProps) {
 
   const [activeTab, setActiveTab] = useState<'slide' | 'design' | 'template'>(initialTab);
+  const [textSubTab, setTextSubTab] = useState<'content' | 'style'>('content');
 
   // Templates
   const { templates, saveTemplate, deleteTemplate, applyTemplate } = useTemplates();
@@ -264,110 +280,549 @@ export function ControlPanel({
                         )}
                     </AccordionSection>
 
-                    {/* 2. Text Content */}
+                    {/* 2. Text Settings (Combined Content + Style) */}
                     <AccordionSection
-                        title="Text Details"
+                        title="Text Settings"
                         icon={Type}
                         isOpen={openSections.text}
                         onToggle={() => toggleSection('text')}
                     >
-                             <div>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <label className="text-xs font-medium text-neutral-500">작은 타이틀</label>
-                                    <label className="flex items-center gap-1.5 cursor-pointer">
-                                        <span className="text-xs text-neutral-500">Show</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={project.showSmallTitle !== false}
-                                            onChange={(e) => onProjectChange({ showSmallTitle: e.target.checked })}
-                                            className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
-                                        />
-                                    </label>
-                                </div>
-                                <input
-                                    value={slide.smallTitle || ''}
-                                    onChange={(e) => onSlideChange({ smallTitle: e.target.value })}
-                                    disabled={project.showSmallTitle === false}
-                                    className={cn(
-                                        "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
-                                        project.showSmallTitle === false && "opacity-50 cursor-not-allowed"
-                                    )}
-                                    placeholder="Enter small title..."
-                                />
+                        {/* Sub Tabs */}
+                        <div className="flex gap-1 p-1 bg-neutral-900 border border-neutral-700 rounded-lg mb-4">
+                            <SubTabButton active={textSubTab === 'content'} onClick={() => setTextSubTab('content')}>
+                                Content
+                            </SubTabButton>
+                            <SubTabButton active={textSubTab === 'style'} onClick={() => setTextSubTab('style')}>
+                                Style
+                            </SubTabButton>
+                        </div>
 
-                                {/* Small Title Position Grid */}
-                                {project.showSmallTitle !== false && (
-                                    <div className="mt-3">
-                                        <label className="text-xs font-medium text-neutral-500 mb-2 block">위치 (드래그로 조절 가능)</label>
-                                        <div className="grid grid-cols-3 gap-1 w-full max-w-[120px]">
+                        {/* Content Tab */}
+                        {textSubTab === 'content' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-medium text-neutral-500">작은 타이틀</label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                            <span className="text-xs text-neutral-500">Show</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={project.showSmallTitle !== false}
+                                                onChange={(e) => onProjectChange({ showSmallTitle: e.target.checked })}
+                                                className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
+                                            />
+                                        </label>
+                                    </div>
+                                    <input
+                                        value={slide.smallTitle || ''}
+                                        onChange={(e) => onSlideChange({ smallTitle: e.target.value })}
+                                        disabled={project.showSmallTitle === false}
+                                        className={cn(
+                                            "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
+                                            project.showSmallTitle === false && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        placeholder="Enter small title..."
+                                    />
+
+                                    {/* Small Title Position Grid */}
+                                    {project.showSmallTitle !== false && (
+                                        <div className="mt-3 space-y-3">
+                                            <div>
+                                                <label className="text-xs font-medium text-neutral-500 mb-2 block">위치</label>
+                                                <div className="grid grid-cols-3 gap-1 bg-neutral-900 border border-neutral-700 rounded-lg p-2">
+                                                    {TEXT_POSITIONS.map((pos) => (
+                                                        <button
+                                                            key={pos.value}
+                                                            onClick={() => onProjectChange({ smallTitlePosition: pos.value })}
+                                                            className={cn(
+                                                                "py-2 text-xs font-medium rounded-md transition-all",
+                                                                (project.smallTitlePosition || 'top-left') === pos.value
+                                                                    ? "bg-indigo-600 text-white shadow-sm"
+                                                                    : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800"
+                                                            )}
+                                                        >
+                                                            {pos.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {(() => {
+                                                    const verticalPos = (project.smallTitlePosition || 'top-left').split('-')[0];
+                                                    const minVal = verticalPos === 'bottom' ? 0 : verticalPos === 'middle' ? -50 : -50;
+                                                    const maxVal = verticalPos === 'top' ? 0 : verticalPos === 'middle' ? 50 : 50;
+                                                    return (
+                                                        <>
+                                                            <div className="flex justify-between items-center text-xs mb-2">
+                                                                <span className="font-medium text-neutral-500">상하 오프셋</span>
+                                                                <div className="flex items-center gap-1">
+                                                                    <input
+                                                                        type="text"
+                                                                        inputMode="numeric"
+                                                                        key={`small-title-offset-${project.smallTitleVerticalOffset}`}
+                                                                        defaultValue={project.smallTitleVerticalOffset || 0}
+                                                                        onBlur={(e) => {
+                                                                            const num = parseInt(e.target.value, 10);
+                                                                            const val = isNaN(num) ? 0 : Math.max(minVal, Math.min(maxVal, num));
+                                                                            if (val !== (project.smallTitleVerticalOffset || 0)) {
+                                                                                onProjectChange({ smallTitleVerticalOffset: val });
+                                                                            }
+                                                                        }}
+                                                                        onKeyDown={(e) => {
+                                                                            if (e.key === 'Enter') {
+                                                                                (e.target as HTMLInputElement).blur();
+                                                                            }
+                                                                        }}
+                                                                        className="w-12 text-xs text-right p-1 border border-neutral-700 rounded bg-neutral-800/50 text-neutral-300 font-mono focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                                    />
+                                                                    <span className="text-neutral-500">%</span>
+                                                                </div>
+                                                            </div>
+                                                            <input
+                                                                type="range"
+                                                                min={minVal}
+                                                                max={maxVal}
+                                                                value={project.smallTitleVerticalOffset || 0}
+                                                                onChange={(e) => onProjectChange({ smallTitleVerticalOffset: Number(e.target.value) })}
+                                                                className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                            />
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <hr className="border-neutral-800" />
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-medium text-neutral-500">Headline</label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                            <span className="text-xs text-neutral-500">Show</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={project.showHeadline}
+                                                onChange={(e) => onProjectChange({ showHeadline: e.target.checked })}
+                                                className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
+                                            />
+                                        </label>
+                                    </div>
+                                    <textarea
+                                        value={slide.headline}
+                                        onChange={(e) => onSlideChange({ headline: e.target.value })}
+                                        rows={3}
+                                        disabled={!project.showHeadline}
+                                        className={cn(
+                                            "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
+                                            !project.showHeadline && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        placeholder="Enter slide headline..."
+                                    />
+                                </div>
+
+                                <hr className="border-neutral-800" />
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-medium text-neutral-500">서브 타이틀</label>
+                                        <label className="flex items-center gap-1.5 cursor-pointer">
+                                            <span className="text-xs text-neutral-500">Show</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={project.showTags}
+                                                onChange={(e) => onProjectChange({ showTags: e.target.checked })}
+                                                className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
+                                            />
+                                        </label>
+                                    </div>
+                                    <input
+                                        defaultValue={slide.tags.join(', ')}
+                                        onChange={(e) => handleTagsChange(e.target.value)}
+                                        disabled={!project.showTags}
+                                        className={cn(
+                                            "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
+                                            !project.showTags && "opacity-50 cursor-not-allowed"
+                                        )}
+                                        placeholder="Separate with commas"
+                                    />
+                                </div>
+
+                                <hr className="border-neutral-800" />
+
+                                {/* Text Box Position */}
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-xs font-medium text-neutral-500 mb-2 block">Text Box Position</label>
+                                        <div className="grid grid-cols-3 gap-1 bg-neutral-900 border border-neutral-700 rounded-lg p-2">
                                             {TEXT_POSITIONS.map((pos) => (
                                                 <button
                                                     key={pos.value}
-                                                    onClick={() => onProjectChange({ smallTitlePosition: pos.value })}
+                                                    onClick={() => onProjectChange({
+                                                        textBoxSettings: { ...project.textBoxSettings, position: pos.value }
+                                                    })}
                                                     className={cn(
-                                                        "aspect-square rounded flex items-center justify-center text-[10px] transition-all",
-                                                        (project.smallTitlePosition || 'top-left') === pos.value
-                                                            ? "bg-indigo-500 text-white"
-                                                            : "bg-neutral-800 text-neutral-500 hover:bg-neutral-700"
+                                                        "py-2 text-xs font-medium rounded-md transition-all",
+                                                        project.textBoxSettings.position === pos.value
+                                                            ? "bg-indigo-600 text-white shadow-sm"
+                                                            : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800"
                                                     )}
-                                                    title={pos.label}
                                                 >
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                    {pos.label}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
+                                    <div>
+                                        {(() => {
+                                            const verticalPos = (project.textBoxSettings?.position || 'bottom-left').split('-')[0];
+                                            const minVal = verticalPos === 'bottom' ? 0 : verticalPos === 'middle' ? -50 : -50;
+                                            const maxVal = verticalPos === 'top' ? 0 : verticalPos === 'middle' ? 50 : 50;
+                                            return (
+                                                <>
+                                                    <div className="flex justify-between items-center text-xs mb-2">
+                                                        <span className="font-medium text-neutral-500">상하 오프셋</span>
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="text"
+                                                                inputMode="numeric"
+                                                                key={`textbox-offset-${project.textBoxSettings.verticalOffset}`}
+                                                                defaultValue={project.textBoxSettings.verticalOffset || 0}
+                                                                onBlur={(e) => {
+                                                                    const num = parseInt(e.target.value, 10);
+                                                                    const val = isNaN(num) ? 0 : Math.max(minVal, Math.min(maxVal, num));
+                                                                    if (val !== (project.textBoxSettings.verticalOffset || 0)) {
+                                                                        onProjectChange({
+                                                                            textBoxSettings: { ...project.textBoxSettings, verticalOffset: val }
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        (e.target as HTMLInputElement).blur();
+                                                                    }
+                                                                }}
+                                                                className="w-12 text-xs text-right p-1 border border-neutral-700 rounded bg-neutral-800/50 text-neutral-300 font-mono focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                                            />
+                                                            <span className="text-neutral-500">%</span>
+                                                        </div>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min={minVal}
+                                                        max={maxVal}
+                                                        value={project.textBoxSettings.verticalOffset || 0}
+                                                        onChange={(e) => onProjectChange({
+                                                            textBoxSettings: { ...project.textBoxSettings, verticalOffset: Number(e.target.value) }
+                                                        })}
+                                                        className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                    />
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Style Tab */}
+                        {textSubTab === 'style' && (
+                            <div className="space-y-4">
+                                {/* Text Box Style */}
+                                <div>
+                                    <label className="text-xs font-medium text-neutral-500 mb-2 block">Box Style</label>
+                                    <div className="grid grid-cols-5 gap-1 bg-neutral-900 border border-neutral-700 rounded-lg p-1">
+                                        {TEXT_BOX_STYLES.map((style) => (
+                                            <button
+                                                key={style.value}
+                                                onClick={() => onProjectChange({
+                                                    textBoxSettings: { ...project.textBoxSettings, style: style.value }
+                                                })}
+                                                title={style.description}
+                                                className={cn(
+                                                    "py-1.5 text-[9px] font-medium rounded-md transition-all",
+                                                    project.textBoxSettings.style === style.value
+                                                        ? "bg-neutral-700 text-white shadow-sm"
+                                                        : "text-neutral-500 hover:text-neutral-300"
+                                                )}
+                                            >
+                                                {style.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Style-specific Settings */}
+                                {project.textBoxSettings.style !== 'none' && (
+                                    <>
+                                        <hr className="border-neutral-700" />
+
+                                        {/* 단색 (solid): Background only */}
+                                        {project.textBoxSettings.style === 'solid' && (
+                                            <>
+                                                <div>
+                                                    <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Background Color</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="color"
+                                                            value={project.textBoxSettings.backgroundColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={project.textBoxSettings.backgroundColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between text-xs mb-2">
+                                                        <span className="font-medium text-neutral-500">Background Opacity</span>
+                                                        <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0" max="100"
+                                                        value={project.textBoxSettings.backgroundOpacity}
+                                                        onChange={(e) => onProjectChange({
+                                                            textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
+                                                        })}
+                                                        className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* 테두리 (outline): Background + Border */}
+                                        {project.textBoxSettings.style === 'outline' && (
+                                            <>
+                                                <div>
+                                                    <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Background Color</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="color"
+                                                            value={project.textBoxSettings.backgroundColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={project.textBoxSettings.backgroundColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between text-xs mb-2">
+                                                        <span className="font-medium text-neutral-500">Background Opacity</span>
+                                                        <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0" max="100"
+                                                        value={project.textBoxSettings.backgroundOpacity}
+                                                        onChange={(e) => onProjectChange({
+                                                            textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
+                                                        })}
+                                                        className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                    />
+                                                </div>
+                                                <hr className="border-neutral-700" />
+                                                <div>
+                                                    <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Border Color</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="color"
+                                                            value={project.textBoxSettings.borderColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, borderColor: e.target.value }
+                                                            })}
+                                                            className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={project.textBoxSettings.borderColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, borderColor: e.target.value }
+                                                            })}
+                                                            className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between text-xs mb-2">
+                                                        <span className="font-medium text-neutral-500">Border Width</span>
+                                                        <span className="text-neutral-400 font-mono">{project.textBoxSettings.borderWidth}px</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="1" max="10"
+                                                        value={project.textBoxSettings.borderWidth}
+                                                        onChange={(e) => onProjectChange({
+                                                            textBoxSettings: { ...project.textBoxSettings, borderWidth: Number(e.target.value) }
+                                                        })}
+                                                        className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* 그라데이션 (gradient): Base + End Color */}
+                                        {project.textBoxSettings.style === 'gradient' && (
+                                            <>
+                                                <div>
+                                                    <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Start Color</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="color"
+                                                            value={project.textBoxSettings.backgroundColor || '#000000'}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={project.textBoxSettings.backgroundColor || '#000000'}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-medium text-neutral-500 mb-1.5 block">End Color</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="color"
+                                                            value={project.textBoxSettings.gradientEndColor || '#FFFFFF'}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, gradientEndColor: e.target.value }
+                                                            })}
+                                                            className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={project.textBoxSettings.gradientEndColor || '#FFFFFF'}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, gradientEndColor: e.target.value }
+                                                            })}
+                                                            className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between text-xs mb-2">
+                                                        <span className="font-medium text-neutral-500">Opacity</span>
+                                                        <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0" max="100"
+                                                        value={project.textBoxSettings.backgroundOpacity}
+                                                        onChange={(e) => onProjectChange({
+                                                            textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
+                                                        })}
+                                                        className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {/* 블러 (blur): Background only */}
+                                        {project.textBoxSettings.style === 'blur' && (
+                                            <>
+                                                <div>
+                                                    <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Tint Color</label>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="color"
+                                                            value={project.textBoxSettings.backgroundColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={project.textBoxSettings.backgroundColor}
+                                                            onChange={(e) => onProjectChange({
+                                                                textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
+                                                            })}
+                                                            className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between text-xs mb-2">
+                                                        <span className="font-medium text-neutral-500">Tint Opacity</span>
+                                                        <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0" max="100"
+                                                        value={project.textBoxSettings.backgroundOpacity}
+                                                        onChange={(e) => onProjectChange({
+                                                            textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
+                                                        })}
+                                                        className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+
+                                        <hr className="border-neutral-700" />
+
+                                        {/* Border Radius */}
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-2">
+                                                <span className="font-medium text-neutral-500">Border Radius</span>
+                                                <span className="text-neutral-400 font-mono">{project.textBoxSettings.borderRadius}px</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="0" max="100"
+                                                value={project.textBoxSettings.borderRadius}
+                                                onChange={(e) => onProjectChange({
+                                                    textBoxSettings: { ...project.textBoxSettings, borderRadius: Number(e.target.value) }
+                                                })}
+                                                className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                            />
+                                        </div>
+
+                                        {/* Padding */}
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-2">
+                                                <span className="font-medium text-neutral-500">Padding</span>
+                                                <span className="text-neutral-400 font-mono">{project.textBoxSettings.padding}px</span>
+                                            </div>
+                                            <input
+                                                type="range"
+                                                min="8" max="64"
+                                                value={project.textBoxSettings.padding}
+                                                onChange={(e) => onProjectChange({
+                                                    textBoxSettings: { ...project.textBoxSettings, padding: Number(e.target.value) }
+                                                })}
+                                                className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                                            />
+                                        </div>
+                                    </>
                                 )}
-                             </div>
-                             <div>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <label className="text-xs font-medium text-neutral-500">Headline</label>
-                                    <label className="flex items-center gap-1.5 cursor-pointer">
-                                        <span className="text-xs text-neutral-500">Show</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={project.showHeadline}
-                                            onChange={(e) => onProjectChange({ showHeadline: e.target.checked })}
-                                            className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
-                                        />
-                                    </label>
-                                </div>
-                                <textarea
-                                    value={slide.headline}
-                                    onChange={(e) => onSlideChange({ headline: e.target.value })}
-                                    rows={3}
-                                    disabled={!project.showHeadline}
-                                    className={cn(
-                                        "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
-                                        !project.showHeadline && "opacity-50 cursor-not-allowed"
-                                    )}
-                                    placeholder="Enter slide headline..."
-                                />
-                             </div>
-                             <div>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <label className="text-xs font-medium text-neutral-500">서브 타이틀</label>
-                                    <label className="flex items-center gap-1.5 cursor-pointer">
-                                        <span className="text-xs text-neutral-500">Show</span>
-                                        <input
-                                            type="checkbox"
-                                            checked={project.showTags}
-                                            onChange={(e) => onProjectChange({ showTags: e.target.checked })}
-                                            className="accent-indigo-500 w-3.5 h-3.5 bg-neutral-700 border-neutral-600 rounded"
-                                        />
-                                    </label>
-                                </div>
-                                <input
-                                    defaultValue={slide.tags.join(', ')}
-                                    onChange={(e) => handleTagsChange(e.target.value)}
-                                    disabled={!project.showTags}
-                                    className={cn(
-                                        "w-full text-sm p-3 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 placeholder:text-neutral-600 transition-colors",
-                                        !project.showTags && "opacity-50 cursor-not-allowed"
-                                    )}
-                                    placeholder="Separate with commas"
-                                />
-                             </div>
+                            </div>
+                        )}
                     </AccordionSection>
 
                     {/* 3. Font Settings */}
@@ -449,9 +904,32 @@ export function ControlPanel({
 
                             {/* Small Title Font Size */}
                             <div>
-                                <div className="flex justify-between text-xs mb-2">
+                                <div className="flex justify-between items-center text-xs mb-2">
                                     <span className="font-medium text-neutral-500">작은 타이틀 Size</span>
-                                    <span className="text-neutral-400 font-mono">{project.fontSettings.smallTitleFontSize}px</span>
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            key={`small-title-font-${project.fontSettings.smallTitleFontSize}`}
+                                            defaultValue={project.fontSettings.smallTitleFontSize}
+                                            onBlur={(e) => {
+                                                const num = parseInt(e.target.value, 10);
+                                                const val = isNaN(num) ? 24 : Math.max(12, Math.min(40, num));
+                                                if (val !== project.fontSettings.smallTitleFontSize) {
+                                                    onProjectChange({
+                                                        fontSettings: { ...project.fontSettings, smallTitleFontSize: val }
+                                                    });
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    (e.target as HTMLInputElement).blur();
+                                                }
+                                            }}
+                                            className="w-12 text-xs text-right p-1 border border-neutral-700 rounded bg-neutral-800/50 text-neutral-300 font-mono focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        />
+                                        <span className="text-neutral-500">px</span>
+                                    </div>
                                 </div>
                                 <input
                                     type="range"
@@ -466,9 +944,32 @@ export function ControlPanel({
 
                             {/* Headline Font Size */}
                             <div>
-                                <div className="flex justify-between text-xs mb-2">
+                                <div className="flex justify-between items-center text-xs mb-2">
                                     <span className="font-medium text-neutral-500">Headline Size</span>
-                                    <span className="text-neutral-400 font-mono">{project.fontSettings.headlineFontSize}px</span>
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            key={`headline-font-${project.fontSettings.headlineFontSize}`}
+                                            defaultValue={project.fontSettings.headlineFontSize}
+                                            onBlur={(e) => {
+                                                const num = parseInt(e.target.value, 10);
+                                                const val = isNaN(num) ? 60 : Math.max(32, Math.min(100, num));
+                                                if (val !== project.fontSettings.headlineFontSize) {
+                                                    onProjectChange({
+                                                        fontSettings: { ...project.fontSettings, headlineFontSize: val }
+                                                    });
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    (e.target as HTMLInputElement).blur();
+                                                }
+                                            }}
+                                            className="w-12 text-xs text-right p-1 border border-neutral-700 rounded bg-neutral-800/50 text-neutral-300 font-mono focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        />
+                                        <span className="text-neutral-500">px</span>
+                                    </div>
                                 </div>
                                 <input
                                     type="range"
@@ -483,9 +984,32 @@ export function ControlPanel({
 
                             {/* Tags Font Size */}
                             <div>
-                                <div className="flex justify-between text-xs mb-2">
+                                <div className="flex justify-between items-center text-xs mb-2">
                                     <span className="font-medium text-neutral-500">서브 타이틀 Size</span>
-                                    <span className="text-neutral-400 font-mono">{project.fontSettings.tagsFontSize}px</span>
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="text"
+                                            inputMode="numeric"
+                                            key={`tags-font-${project.fontSettings.tagsFontSize}`}
+                                            defaultValue={project.fontSettings.tagsFontSize}
+                                            onBlur={(e) => {
+                                                const num = parseInt(e.target.value, 10);
+                                                const val = isNaN(num) ? 26 : Math.max(14, Math.min(40, num));
+                                                if (val !== project.fontSettings.tagsFontSize) {
+                                                    onProjectChange({
+                                                        fontSettings: { ...project.fontSettings, tagsFontSize: val }
+                                                    });
+                                                }
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    (e.target as HTMLInputElement).blur();
+                                                }
+                                            }}
+                                            className="w-12 text-xs text-right p-1 border border-neutral-700 rounded bg-neutral-800/50 text-neutral-300 font-mono focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        />
+                                        <span className="text-neutral-500">px</span>
+                                    </div>
                                 </div>
                                 <input
                                     type="range"
@@ -719,329 +1243,6 @@ export function ControlPanel({
                             )}
                     </AccordionSection>
 
-                    {/* Text Box Settings */}
-                    <AccordionSection
-                        title="Text Box Settings"
-                        icon={Type}
-                        isOpen={openSections.textBox}
-                        onToggle={() => toggleSection('textBox')}
-                    >
-                            {/* Text Box Style */}
-                            <div>
-                                <label className="text-xs font-medium text-neutral-500 mb-2 block">Box Style</label>
-                                <div className="grid grid-cols-5 gap-1 bg-neutral-900 border border-neutral-700 rounded-lg p-1">
-                                    {TEXT_BOX_STYLES.map((style) => (
-                                        <button
-                                            key={style.value}
-                                            onClick={() => onProjectChange({
-                                                textBoxSettings: { ...project.textBoxSettings, style: style.value }
-                                            })}
-                                            title={style.description}
-                                            className={cn(
-                                                "py-1.5 text-[9px] font-medium rounded-md transition-all",
-                                                project.textBoxSettings.style === style.value
-                                                    ? "bg-neutral-700 text-white shadow-sm"
-                                                    : "text-neutral-500 hover:text-neutral-300"
-                                            )}
-                                        >
-                                            {style.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Text Position - 3x3 Grid */}
-                            <div>
-                                <label className="text-xs font-medium text-neutral-500 mb-2 block">Position</label>
-                                <div className="grid grid-cols-3 gap-1 bg-neutral-900 border border-neutral-700 rounded-lg p-2">
-                                    {TEXT_POSITIONS.map((pos) => (
-                                        <button
-                                            key={pos.value}
-                                            onClick={() => onProjectChange({
-                                                textBoxSettings: { ...project.textBoxSettings, position: pos.value }
-                                            })}
-                                            className={cn(
-                                                "py-2 text-xs font-medium rounded-md transition-all",
-                                                project.textBoxSettings.position === pos.value
-                                                    ? "bg-indigo-600 text-white shadow-sm"
-                                                    : "text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800"
-                                            )}
-                                        >
-                                            {pos.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Style-specific Settings */}
-                            {project.textBoxSettings.style !== 'none' && (
-                                <>
-                                    <hr className="border-neutral-700" />
-
-                                    {/* 단색 (solid): Background only */}
-                                    {project.textBoxSettings.style === 'solid' && (
-                                        <>
-                                            <div>
-                                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Background Color</label>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="color"
-                                                        value={project.textBoxSettings.backgroundColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={project.textBoxSettings.backgroundColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="flex justify-between text-xs mb-2">
-                                                    <span className="font-medium text-neutral-500">Background Opacity</span>
-                                                    <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min="0" max="100"
-                                                    value={project.textBoxSettings.backgroundOpacity}
-                                                    onChange={(e) => onProjectChange({
-                                                        textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
-                                                    })}
-                                                    className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 테두리 (outline): Background + Border */}
-                                    {project.textBoxSettings.style === 'outline' && (
-                                        <>
-                                            <div>
-                                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Background Color</label>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="color"
-                                                        value={project.textBoxSettings.backgroundColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={project.textBoxSettings.backgroundColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="flex justify-between text-xs mb-2">
-                                                    <span className="font-medium text-neutral-500">Background Opacity</span>
-                                                    <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min="0" max="100"
-                                                    value={project.textBoxSettings.backgroundOpacity}
-                                                    onChange={(e) => onProjectChange({
-                                                        textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
-                                                    })}
-                                                    className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                                />
-                                            </div>
-                                            <hr className="border-neutral-700" />
-                                            <div>
-                                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Border Color</label>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="color"
-                                                        value={project.textBoxSettings.borderColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, borderColor: e.target.value }
-                                                        })}
-                                                        className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={project.textBoxSettings.borderColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, borderColor: e.target.value }
-                                                        })}
-                                                        className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="flex justify-between text-xs mb-2">
-                                                    <span className="font-medium text-neutral-500">Border Width</span>
-                                                    <span className="text-neutral-400 font-mono">{project.textBoxSettings.borderWidth}px</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min="1" max="10"
-                                                    value={project.textBoxSettings.borderWidth}
-                                                    onChange={(e) => onProjectChange({
-                                                        textBoxSettings: { ...project.textBoxSettings, borderWidth: Number(e.target.value) }
-                                                    })}
-                                                    className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 그라데이션 (gradient): Base + End Color */}
-                                    {project.textBoxSettings.style === 'gradient' && (
-                                        <>
-                                            <div>
-                                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Start Color</label>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="color"
-                                                        value={project.textBoxSettings.backgroundColor || '#000000'}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={project.textBoxSettings.backgroundColor || '#000000'}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">End Color</label>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="color"
-                                                        value={project.textBoxSettings.gradientEndColor || '#FFFFFF'}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, gradientEndColor: e.target.value }
-                                                        })}
-                                                        className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={project.textBoxSettings.gradientEndColor || '#FFFFFF'}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, gradientEndColor: e.target.value }
-                                                        })}
-                                                        className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="flex justify-between text-xs mb-2">
-                                                    <span className="font-medium text-neutral-500">Opacity</span>
-                                                    <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min="0" max="100"
-                                                    value={project.textBoxSettings.backgroundOpacity}
-                                                    onChange={(e) => onProjectChange({
-                                                        textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
-                                                    })}
-                                                    className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* 블러 (blur): Background only */}
-                                    {project.textBoxSettings.style === 'blur' && (
-                                        <>
-                                            <div>
-                                                <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Tint Color</label>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="color"
-                                                        value={project.textBoxSettings.backgroundColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="w-10 h-10 rounded-lg border border-neutral-700 cursor-pointer bg-transparent"
-                                                    />
-                                                    <input
-                                                        type="text"
-                                                        value={project.textBoxSettings.backgroundColor}
-                                                        onChange={(e) => onProjectChange({
-                                                            textBoxSettings: { ...project.textBoxSettings, backgroundColor: e.target.value }
-                                                        })}
-                                                        className="flex-1 text-sm p-2.5 border border-neutral-700 rounded-lg focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-neutral-800/50 text-neutral-200 font-mono uppercase"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="flex justify-between text-xs mb-2">
-                                                    <span className="font-medium text-neutral-500">Tint Opacity</span>
-                                                    <span className="text-neutral-400 font-mono">{project.textBoxSettings.backgroundOpacity}%</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min="0" max="100"
-                                                    value={project.textBoxSettings.backgroundOpacity}
-                                                    onChange={(e) => onProjectChange({
-                                                        textBoxSettings: { ...project.textBoxSettings, backgroundOpacity: Number(e.target.value) }
-                                                    })}
-                                                    className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    <hr className="border-neutral-700" />
-
-                                    {/* Border Radius - 모든 스타일 공통 */}
-                                    <div>
-                                        <div className="flex justify-between text-xs mb-2">
-                                            <span className="font-medium text-neutral-500">Border Radius</span>
-                                            <span className="text-neutral-400 font-mono">{project.textBoxSettings.borderRadius}px</span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="0" max="100"
-                                            value={project.textBoxSettings.borderRadius}
-                                            onChange={(e) => onProjectChange({
-                                                textBoxSettings: { ...project.textBoxSettings, borderRadius: Number(e.target.value) }
-                                            })}
-                                            className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                        />
-                                    </div>
-
-                                    {/* Padding - 모든 스타일 공통 */}
-                                    <div>
-                                        <div className="flex justify-between text-xs mb-2">
-                                            <span className="font-medium text-neutral-500">Padding</span>
-                                            <span className="text-neutral-400 font-mono">{project.textBoxSettings.padding}px</span>
-                                        </div>
-                                        <input
-                                            type="range"
-                                            min="8" max="64"
-                                            value={project.textBoxSettings.padding}
-                                            onChange={(e) => onProjectChange({
-                                                textBoxSettings: { ...project.textBoxSettings, padding: Number(e.target.value) }
-                                            })}
-                                            className="w-full h-1.5 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                                        />
-                                    </div>
-                                </>
-                            )}
-                    </AccordionSection>
                 </div>
             )}
 

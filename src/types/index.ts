@@ -48,6 +48,7 @@ export const TEXT_POSITIONS: { value: TextPosition; label: string }[] = [
 export interface TextBoxSettings {
   style: TextBoxStyle;
   position: TextPosition;
+  verticalOffset: number;  // -50 to 50 percent offset from base position
   backgroundColor: string;
   backgroundOpacity: number;
   gradientEndColor: string;  // for gradient style
@@ -83,6 +84,7 @@ export interface ProjectData {
   showDate: boolean;
   showSmallTitle: boolean;
   smallTitlePosition: TextPosition;
+  smallTitleVerticalOffset: number;  // -50 to 50 percent offset from base position
   showHeadline: boolean;
   showTags: boolean;
   enableOverlay: boolean;
@@ -129,6 +131,7 @@ export const INITIAL_FONT_SETTINGS: FontSettings = {
 export const INITIAL_TEXT_BOX_SETTINGS: TextBoxSettings = {
   style: 'solid',
   position: 'bottom-left',
+  verticalOffset: 0,
   backgroundColor: '#000000',
   backgroundOpacity: 80,
   gradientEndColor: '#FFFFFF',
@@ -144,6 +147,7 @@ export const INITIAL_PROJECT_DATA: ProjectData = {
   showDate: true,
   showSmallTitle: true,
   smallTitlePosition: 'top-left',
+  smallTitleVerticalOffset: 0,
   showHeadline: true,
   showTags: true,
   enableOverlay: false,
@@ -169,6 +173,7 @@ export interface DesignTemplate {
   showDate: boolean;
   showSmallTitle: boolean;
   smallTitlePosition: TextPosition;
+  smallTitleVerticalOffset: number;
   showHeadline: boolean;
   showTags: boolean;
   enableOverlay: boolean;
