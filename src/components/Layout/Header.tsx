@@ -115,9 +115,9 @@ export function Header({ user }: HeaderProps) {
   return (
     <header className="h-16 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between px-6 shrink-0 z-[100]">
       {/* Logo */}
-      <div className="flex items-center gap-3 ml-2">
+      <div className="flex items-center gap-3 -ml-0.5">
         <img src="/logo.png" alt="Kardyy" className="w-6 h-6 brightness-0 invert" />
-        <span className="font-bold text-lg text-white">Kardyy</span>
+        <span className="font-bold text-xl text-white -ml-1">Kardyy</span>
       </div>
 
       {/* Search / Context */}
